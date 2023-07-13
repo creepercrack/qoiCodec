@@ -1,2 +1,2 @@
 # qoiCodec
-Very slow QOI decoder written in Java
+QOI decoder written in Java

@@ -28,7 +28,8 @@ public class QOIViewer {
             byte a = -1;
             int[] seenPixels = new int[64];
 
-            while (qoiInputImage.available() > 0) {
+            int expectedSize = width * height * 4;
+            while (qoiOutputImage.size() < expectedSize) {
                 byte flag = qoiInputImage.readByte();
 
                 switch (flag) {
@@ -38,8 +39,6 @@ public class QOIViewer {
                         r = qoiInputImage.readByte();
                         g = qoiInputImage.readByte();
                         b = qoiInputImage.readByte();
-
-                        //System.out.printf("QOI_OP_RGB %d %d %d %d%n", r, g, b, a);
                     }
 
                     case -1 -> {
@@ -49,8 +48,6 @@ public class QOIViewer {
                         g = qoiInputImage.readByte();
                         b = qoiInputImage.readByte();
                         a = qoiInputImage.readByte();
-
-                        //System.out.printf("QOI_OP_RGBA %d %d %d %d%n", r, g, b, a);
                     }
 
                     default -> {
@@ -65,8 +62,6 @@ public class QOIViewer {
                                 g = (byte) (seenPixels[data] >> 16 & 0xFF);
                                 b = (byte) (seenPixels[data] >> 8  & 0xFF);
                                 a = (byte) (seenPixels[data]       & 0xFF);
-
-                                //System.out.printf("QOI_OP_INDEX %d %d %d %d%n", r, g, b, a);
                             }
 
                             case 1 -> {
@@ -75,20 +70,17 @@ public class QOIViewer {
                                 r += (data >> 4 & 0x03) - 2;
                                 g += (data >> 2 & 0x03) - 2;
                                 b += (data      & 0x03) - 2;
-
-                                //System.out.printf("QOI_OP_DIFF %d %d %d %d%n", r, g, b, a);
                             }
 
                             case -2 -> {
                                 // QOI_OP_LUMA
+                                
                                 byte data2 = qoiInputImage.readByte();
                                 byte gDiff = (byte) (data - 32);
 
                                 r += gDiff + (data2 >> 4 & 0x0F) - 8;
                                 g += gDiff;
                                 b += gDiff + (data2      & 0x0F) - 8;
-
-                                //System.out.printf("QOI_OP_LUMA %d %d %d %d%n", r, g, b, a);
                             }
 
                             case -1 -> {
@@ -99,8 +91,6 @@ public class QOIViewer {
                                     qoiOutputImage.writeByte(b);
                                     qoiOutputImage.writeByte(g);
                                     qoiOutputImage.writeByte(r);
-
-                                    //System.out.printf("QOI_OP_RUN %d %d %d %d%n", r, g, b, a);
 
                                     int j = ((r & 0xFF) * 3 + (g & 0xFF) * 5 + (b & 0xFF) * 7 + (a & 0xFF) * 11) % 64;
                                     seenPixels[j] = ByteBuffer.wrap(new byte[]{r, g, b, a}).getInt();
@@ -120,6 +110,8 @@ public class QOIViewer {
                 int i = ((r & 0xFF) * 3 + (g & 0xFF) * 5 + (b & 0xFF) * 7 + (a & 0xFF) * 11) % 64;
                 seenPixels[i] = ByteBuffer.wrap(new byte[]{r, g, b, a}).getInt();
             }
+
+            if (qoiInputImage.readLong() != 1) return;
 
             BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
             byte[] src = baos.toByteArray();
